@@ -21,7 +21,7 @@ jobs:
       
       - name: Base64编码和字符切割混淆
         run: |
-          node << 'EOF'
+          node << 'NODESCRIPT'
           const fs = require('fs');
           
           if (!fs.existsSync('worker-source.js')) {
@@ -39,27 +39,20 @@ jobs:
           const chars = base64Str.split('').map(c => {
             if (c === "'") return "'\\''";
             if (c === '\\') return "'\\\\'";
-            return `'${c}'`;
+            return "'" + c + "'";
           });
           
           // 生成混淆后的代码
-          const obfuscatedCode = `// 自动生成的混淆代码 - 请勿手动编辑
-export default {
-    async fetch(request, env, ctx) {
-        const c=[${chars.join(',')}];
-        const s=c.join('');
-        const d=atob(s);
-        const m=new Function('return '+d)();
-        return m.default.fetch(request,env,ctx);
-    }
-};`;
+          const header = "// 自动生成的混淆代码 - 请勿手动编辑\n";
+          const code = "export default {\n    async fetch(request, env, ctx) {\n        const c=[" + chars.join(',') + "];\n        const s=c.join('');\n        const d=atob(s);\n        const m=new Function('return '+d)();\n        return m.default.fetch(request,env,ctx);\n    }\n};";
+          const obfuscatedCode = header + code;
           
           fs.writeFileSync('_worker.js', obfuscatedCode);
           console.log('混淆完成');
           console.log('原始大小:', sourceCode.length, '字符');
           console.log('Base64大小:', base64Str.length, '字符');
           console.log('字符数组长度:', chars.length);
-          EOF
+          NODESCRIPT
       
       - name: 提交混淆后的代码
         run: |
